@@ -5,6 +5,7 @@ import * as bcrypt from "bcrypt";
 import { Tokens } from './types';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
+import { Secret } from 'src/common/enums/secret.enum';
 
 
 @Injectable()
@@ -49,8 +50,22 @@ export class AuthService {
         return tokens;
     }
 
-    logout() {
-
+    async logout(userId: number): Promise<boolean> {
+       const response = await this.db.user.updateMany({
+            where: {
+                id: userId,
+                hashedRt: {
+                    not: null
+                }
+            },
+            data: {
+                hashedRt: null
+            }
+        })
+        if (response.count === 1) {
+            return true;
+        }
+        return false;
     }
 
     refreshTokens() {
@@ -68,7 +83,7 @@ export class AuthService {
                 email
             },
                 {
-                    secret: this.configService.get("ACCESS_TOKEN_SECRET"),
+                    secret: this.configService.get(Secret.ACCESS_TOKEN_SECRET),
                     expiresIn: 60 * 15
                 }
             ),
@@ -78,7 +93,7 @@ export class AuthService {
                     email
                 },
                 {
-                    secret: this.configService.get("REFRESH_TOKEN_SECRET"),
+                    secret: this.configService.get(Secret.REFRESH_TOKEN_SECRET),
                     expiresIn: 60 * 60 * 24 * 7
                 }
             )
